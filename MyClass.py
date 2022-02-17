@@ -333,10 +333,11 @@ class MainPanel(wx.Panel):
         self._leftWindow1.SizeWindows()
         self.Bind(wx.EVT_BUTTON, self.OnButton)
 
-    def OnButton(self,event):
+    def OnButton(self, event):
         idEvent = event.GetId()
         if idEvent in self.idToolButtonList:
             self.work_zone_Panel.notebook.SetSelection(self.idToolButtonList.index(idEvent))
+
 
 class WorkZonePanel(wx.Panel):
     def __init__(self, parent, master, log):
@@ -344,7 +345,7 @@ class WorkZonePanel(wx.Panel):
         self.master = master
         self.log = log
         self.notebook = wx.Notebook(self, -1, size=(21, 21), style=
-                                    wx.BK_DEFAULT
+        wx.BK_DEFAULT
                                     # wx.BK_TOP
                                     # wx.BK_BOTTOM
                                     # wx.BK_LEFT
