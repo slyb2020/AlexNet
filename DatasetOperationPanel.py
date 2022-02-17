@@ -2,9 +2,57 @@ import cv2
 import numpy as np
 import wx
 import wx.lib.scrolledpanel as scrolled
-
 import images
 from ID_DEFINE import *
+from torch.utils.data import Dataset
+from torchvision import transforms
+import torch
+import random
+
+
+class DoorTypeDataset(Dataset):
+    def __init__(self, path, isTrain=True, size=None):
+        """
+        :param path: 数据集所处文件夹名
+        :param isTrain: 是否是训练集数据
+        :param isAug:   数据是否需要增广
+        """
+        if isTrain:
+            self.imgPath = path + 'Training/'
+            self.labelList = [i.split('.')[0] for i in os.listdir(self.imgPath)]
+            self.filenames = []
+            for dir in self.labelList:
+                for filename in os.listdir(self.imgPath + dir):
+                    self.filenames.append(dir + '/' + filename)
+            self.size = size
+
+    def __len__(self):
+        return len(self.filenames)
+
+    def __getitem__(self, index):
+        img = None
+        print(self.imgPath + self.filenames[index])
+        img = cv2.imread(self.imgPath + self.filenames[index])  # 读取原始图像
+        h, w = img.shape[0:2]
+        if self.size:
+            padw, padh = 0, 0  # 要记录宽高方向的padding具体数值，因为padding之后需要调整bbox的位置信息
+            if h > w:
+                padw = (h - w) // 2
+                img = np.pad(img, ((0, 0), (padw, padw), (0, 0)), 'constant', constant_values=0)
+            elif w > h:
+                padh = (w - h) // 2
+                img = np.pad(img, ((padh, padh), (0, 0), (0, 0)), 'constant', constant_values=0)
+            img = cv2.resize(img, (self.size, self.size))
+            aug = transforms.Compose([
+                transforms.ToTensor()
+            ])
+            img = aug(img)
+        labels = [0] * 10  # labels = self.filenames[index]
+        idx = random.randint(0, 10)
+        labels[idx] = 1
+        # labels = transforms.ToTensor()(np.array(labels))
+        labels = torch.Tensor(labels)
+        return img, labels
 
 
 class PictureShowPanel(wx.Panel):
@@ -33,7 +81,7 @@ class PictureShowPanel(wx.Panel):
             self.width, self.height = self.img.shape[1], self.img.shape[0]
             x, y = self.GetClientSize()
             bmp = wx.Image(self.width, self.height, self.img).Scale(width=x, height=y,
-                                                            quality=wx.IMAGE_QUALITY_BOX_AVERAGE).ConvertToBitmap()
+                                                        quality=wx.IMAGE_QUALITY_BOX_AVERAGE).ConvertToBitmap()
             dc.DrawBitmap(bmp, 0, 0, True)
         evt.Skip()
 
@@ -104,6 +152,12 @@ class DatasetOperationPanel(wx.Panel):
         hbox.Add(self.notebook, 1, wx.EXPAND)
         self.rightPanel.SetSizer(hbox)
         self.Bind(wx.EVT_BUTTON, self.OnPictureButton)
+        self.doorTypeDataset = DoorTypeDataset(datasetDir)
+        img, label = self.doorTypeDataset.__getitem__(0)
+        print(img, label)
+        # print(self.doorTypeDataset.__len__())
+        # for i in self.doorTypeDataset.filnames:
+        #     print(i)
 
     def OnPictureButton(self, event):
         id = event.GetId()
