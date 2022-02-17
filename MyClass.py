@@ -243,7 +243,7 @@ class MainPanel(wx.Panel):
                  size=(1024, 768), style=wx.TAB_TRAVERSAL):
         wx.Panel.__init__(self, parent, id, pos, size, style)
         self.parent = parent
-
+        self.idToolButtonList = []
         il = wx.ImageList(16, 16)
         self.idx1 = il.Add(images._rt_smiley.GetBitmap())
         self.idx2 = il.Add(images.GridBG.GetBitmap())
@@ -308,13 +308,19 @@ class MainPanel(wx.Panel):
         panel = wx.Panel(item, -1, size=(300, 300))
         bitmap = wx.Bitmap("bitmaps/aquabutton.png",
                            wx.BITMAP_TYPE_PNG)
-        self.applicationBTN = AB.AquaButton(panel, wx.ID_ANY, bitmap, "门型识别", size=(100, 50))
+        idToolButton = wx.NewId()
+        self.idToolButtonList.append(idToolButton)
+        self.applicationBTN = AB.AquaButton(panel, idToolButton, bitmap, "门型识别", size=(100, 50))
         self.applicationBTN.SetForegroundColour(wx.BLACK)
         self.applicationBTN.Enable(True)
-        self.datasetOperationBTN = AB.AquaButton(panel, wx.ID_ANY, bitmap, "数据集操作", size=(100, 50))
+        idToolButton = wx.NewId()
+        self.idToolButtonList.append(idToolButton)
+        self.datasetOperationBTN = AB.AquaButton(panel, idToolButton, bitmap, "数据集操作", size=(100, 50))
         self.datasetOperationBTN.SetForegroundColour(wx.BLACK)
         self.datasetOperationBTN.Enable(True)
-        self.AlexNetBTN = AB.AquaButton(panel, wx.ID_ANY, bitmap, "AlexNet模型", size=(100, 50))
+        idToolButton = wx.NewId()
+        self.idToolButtonList.append(idToolButton)
+        self.AlexNetBTN = AB.AquaButton(panel, idToolButton, bitmap, "AlexNet模型", size=(100, 50))
         self.AlexNetBTN.SetForegroundColour(wx.BLACK)
         static = wx.StaticLine(panel, -1)
         vbox = wx.BoxSizer(wx.VERTICAL)
@@ -325,7 +331,12 @@ class MainPanel(wx.Panel):
         panel.SetSizer(vbox)
         self._pnl.AddFoldPanelWindow(item, panel, fpb.FPB_ALIGN_WIDTH, 5, 0)
         self._leftWindow1.SizeWindows()
+        self.Bind(wx.EVT_BUTTON, self.OnButton)
 
+    def OnButton(self,event):
+        idEvent = event.GetId()
+        if idEvent in self.idToolButtonList:
+            self.work_zone_Panel.notebook.SetSelection(self.idToolButtonList.index(idEvent))
 
 class WorkZonePanel(wx.Panel):
     def __init__(self, parent, master, log):

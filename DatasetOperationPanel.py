@@ -7,7 +7,38 @@ import images
 from ID_DEFINE import *
 
 
-class DatasetShowPanel(scrolled.ScrolledPanel):
+class PictureShowPanel(wx.Panel):
+    def __init__(self, parent, log, size):
+        wx.Panel.__init__(self, parent, -1, size=size)
+        self.parent = parent
+        self.log = log
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+
+    def OnPaint(self, evt):
+        # print("here")
+        # dc = wx.PaintDC(self)
+        # self.img = cv2.imread(trainDir+"2007_000027.jpg")
+        # self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+        # self.width, self.height = self.img.shape[1], self.img.shape[0]
+        # x, y = self.GetClientSize()
+        # print("x, y=", x, y)
+        # bmp = wx.Image(self.width, self.height, self.img).Scale(width=x, height=y,
+        #                                 quality=wx.IMAGE_QUALITY_BOX_AVERAGE).ConvertToBitmap()
+        # dc.DrawBitmap(bmp, 0, 0, True)
+
+        if self.parent.filename:
+            dc = wx.PaintDC(self)
+            self.img = cv2.imdecode(np.fromfile(trainDir + self.parent.filename, dtype=np.uint8), cv2.IMREAD_COLOR)
+            self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+            self.width, self.height = self.img.shape[1], self.img.shape[0]
+            x, y = self.GetClientSize()
+            bmp = wx.Image(self.width, self.height, self.img).Scale(width=x, height=y,
+                                                            quality=wx.IMAGE_QUALITY_BOX_AVERAGE).ConvertToBitmap()
+            dc.DrawBitmap(bmp, 0, 0, True)
+        evt.Skip()
+
+
+class DatasetButtonShowPanel(scrolled.ScrolledPanel):
     def __init__(self, parent, log, directory):
         self.log = log
         self.height = 50
@@ -17,7 +48,7 @@ class DatasetShowPanel(scrolled.ScrolledPanel):
         self.buttonIdList = []
         self.buttonFilenameList = []
         for filename in os.listdir(directory)[:500]:
-            img = cv2.imdecode(np.fromfile(trainDir + filename, dtype=np.uint8), cv2.IMREAD_COLOR)
+            img = cv2.imread(trainDir + filename)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             id = wx.NewId()
             button = wx.Button(self, id, size=(self.width, self.height))
@@ -41,8 +72,9 @@ class DatasetOperationPanel(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
         self.log = log
         self.datasetDir = None
-        self.leftPanel = wx.Panel(self, -1, size=(300, -1))
+        self.leftPanel = PictureShowPanel(self, self.log, size=(300, -1))
         self.rightPanel = wx.Panel(self, -1, size=(300, -1))
+        self.filename = None
         hbox = wx.BoxSizer()
         hbox.Add(self.leftPanel, 0, wx.EXPAND)
         hbox.Add(self.rightPanel, 1, wx.EXPAND)
@@ -65,15 +97,16 @@ class DatasetOperationPanel(wx.Panel):
         idx5 = il.Add(images._rt_save.GetBitmap())
         idx6 = il.Add(images._rt_redo.GetBitmap())
         hbox = wx.BoxSizer()
-        self.trainSetPanel = DatasetShowPanel(self.notebook, self.log, trainDir)
+        self.trainSetPanel = DatasetButtonShowPanel(self.notebook, self.log, trainDir)
         self.notebook.AddPage(self.trainSetPanel, "训练集")
         self.testSetPanel = wx.Panel(self.notebook)
         self.notebook.AddPage(self.testSetPanel, "测试集")
         hbox.Add(self.notebook, 1, wx.EXPAND)
         self.rightPanel.SetSizer(hbox)
         self.Bind(wx.EVT_BUTTON, self.OnPictureButton)
+
     def OnPictureButton(self, event):
         id = event.GetId()
         if id in self.trainSetPanel.buttonIdList:
             self.filename = self.trainSetPanel.buttonFilenameList[self.trainSetPanel.buttonIdList.index(id)]
-            print("The filename is:", self.filename)
+            self.leftPanel.Refresh()

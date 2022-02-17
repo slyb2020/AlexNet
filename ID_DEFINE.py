@@ -35,4 +35,4 @@ MENU_PASTE = 10011
 ID_WINDOW_LEFT = wx.NewId()
 ID_WINDOW_BOTTOM = wx.NewId()
 dirName = os.path.dirname(os.path.abspath(__file__))
-trainDir = os.path.join(dirName, "..\\..\\DataSet\\门型\\image\\")
+trainDir = os.path.join(dirName, "..\\..\\DataSet\\DoorTypeDetection\\train\\")
