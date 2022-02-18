@@ -5,9 +5,12 @@ import wx.lib.scrolledpanel as scrolled
 import images
 from ID_DEFINE import *
 from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 import torch
 import random
+import tensorboard
 
 
 class DoorTypeDataset(Dataset):
@@ -17,22 +20,27 @@ class DoorTypeDataset(Dataset):
         :param isTrain: 是否是训练集数据
         :param isAug:   数据是否需要增广
         """
+        self.imgPath = path + 'Training/'
+        self.classes = [i.split('.')[0] for i in os.listdir(self.imgPath)]
+        self.size = size
+        self.filenames = []
         if isTrain:
-            self.imgPath = path + 'Training/'
-            self.labelList = [i.split('.')[0] for i in os.listdir(self.imgPath)]
-            self.filenames = []
-            for dir in self.labelList:
+            for dir in self.classes:
                 for filename in os.listdir(self.imgPath + dir):
                     self.filenames.append(dir + '/' + filename)
-            self.size = size
+        else:
+            self.imgPath = path + 'Test/'
+            for dir in self.classes:
+                for filename in os.listdir(self.imgPath + dir):
+                    self.filenames.append(dir + '/' + filename)
 
     def __len__(self):
         return len(self.filenames)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index):  # Dataset类需要重写的方法，用于返回一个数据和标签对
         img = None
-        print(self.imgPath + self.filenames[index])
         img = cv2.imread(self.imgPath + self.filenames[index])  # 读取原始图像
+        labelName = self.filenames[index].split('/')[0]
         h, w = img.shape[0:2]
         if self.size:
             padw, padh = 0, 0  # 要记录宽高方向的padding具体数值，因为padding之后需要调整bbox的位置信息
@@ -43,15 +51,15 @@ class DoorTypeDataset(Dataset):
                 padh = (w - h) // 2
                 img = np.pad(img, ((padh, padh), (0, 0), (0, 0)), 'constant', constant_values=0)
             img = cv2.resize(img, (self.size, self.size))
-            aug = transforms.Compose([
-                transforms.ToTensor()
-            ])
-            img = aug(img)
-        labels = [0] * 10  # labels = self.filenames[index]
-        idx = random.randint(0, 10)
+        aug = transforms.Compose([
+            transforms.ToTensor()
+        ])
+        img = aug(img)
+        labels = [0] * len(self.classes)  # labels = self.filenames[index]
+        idx = self.classes.index(labelName)
         labels[idx] = 1
-        # labels = transforms.ToTensor()(np.array(labels))
         labels = torch.Tensor(labels)
+        # labels = transforms.ToTensor()(labels) #感觉是因为labels不是picture所以不能使用ToTensor类来进行转换
         return img, labels
 
 
@@ -63,17 +71,6 @@ class PictureShowPanel(wx.Panel):
         self.Bind(wx.EVT_PAINT, self.OnPaint)
 
     def OnPaint(self, evt):
-        # print("here")
-        # dc = wx.PaintDC(self)
-        # self.img = cv2.imread(trainDir+"2007_000027.jpg")
-        # self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
-        # self.width, self.height = self.img.shape[1], self.img.shape[0]
-        # x, y = self.GetClientSize()
-        # print("x, y=", x, y)
-        # bmp = wx.Image(self.width, self.height, self.img).Scale(width=x, height=y,
-        #                                 quality=wx.IMAGE_QUALITY_BOX_AVERAGE).ConvertToBitmap()
-        # dc.DrawBitmap(bmp, 0, 0, True)
-
         if self.parent.filename:
             dc = wx.PaintDC(self)
             self.img = cv2.imdecode(np.fromfile(trainDir + self.parent.filename, dtype=np.uint8), cv2.IMREAD_COLOR)
@@ -152,12 +149,6 @@ class DatasetOperationPanel(wx.Panel):
         hbox.Add(self.notebook, 1, wx.EXPAND)
         self.rightPanel.SetSizer(hbox)
         self.Bind(wx.EVT_BUTTON, self.OnPictureButton)
-        self.doorTypeDataset = DoorTypeDataset(datasetDir)
-        img, label = self.doorTypeDataset.__getitem__(0)
-        print(img, label)
-        # print(self.doorTypeDataset.__len__())
-        # for i in self.doorTypeDataset.filnames:
-        #     print(i)
 
     def OnPictureButton(self, event):
         id = event.GetId()
